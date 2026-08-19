@@ -39,11 +39,6 @@ class Samp : GTASA() {
     private external fun initSAMP(maxFps: Float, directory: String)
 
     override fun onCreate(bundle: Bundle?) {
-        // The launcher downloads the game cache into externalFilesDir. Native
-        // code must use the same root or it starts with an empty/incomplete
-        // data directory and can terminate during its first hooks.
-        super.onCreate(bundle)
-
         activity = this
 
         val display = Companion.windowManager.defaultDisplay
@@ -62,6 +57,9 @@ class Samp : GTASA() {
 
         ensureSampSettings(gameRoot)
         initSAMP(maxFps, gameRoot.absolutePath)
+        // NvEventQueue starts the native game loop in super.onCreate; keep
+        // initSAMP before it so the native layer already knows its storage.
+        super.onCreate(bundle)
         init()
     }
     private fun ensureSampSettings(gameRoot: File) {
