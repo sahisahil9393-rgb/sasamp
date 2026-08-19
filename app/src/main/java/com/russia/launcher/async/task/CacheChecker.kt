@@ -76,7 +76,7 @@ object CacheChecker {
     @JvmStatic
     fun getInvalidFilesList(activity: Activity): MutableList<FileInfo> {
         val filesToReload: MutableList<FileInfo> = mutableListOf()
-        val externalFilesDir = activity.getExternalFilesDir(null)
+        val externalFilesDir = activity.getExternalFilesDir(null) ?: return getFilesList(activity).files.toMutableList()
         val allFiles = getFilesList(activity).files
 
         for (file in allFiles) {

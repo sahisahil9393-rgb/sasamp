@@ -173,12 +173,10 @@ class SplashActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
         if (requestCode == REQUEST_ID) {
-            for (i in grantResults.indices) {
-                if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
-                    permissionsGranded = true
-                    startIfReady()
-                }
-            }
+            // Voice chat is optional. A denial must not leave the splash
+            // screen waiting forever; the game can still start without it.
+            permissionsGranded = true
+            startIfReady()
         }
     }
 

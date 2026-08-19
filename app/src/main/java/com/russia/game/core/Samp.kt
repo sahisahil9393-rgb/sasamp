@@ -39,23 +39,33 @@ class Samp : GTASA() {
     private external fun initSAMP(maxFps: Float, directory: String)
 
     override fun onCreate(bundle: Bundle?) {
+        // The launcher downloads the game cache into externalFilesDir. Native
+        // code must use the same root or it starts with an empty/incomplete
+        // data directory and can terminate during its first hooks.
+        super.onCreate(bundle)
 
         activity = this
 
         val display = Companion.windowManager.defaultDisplay
         maxFps = display.refreshRate
 
-        val internalDir = File(filesDir, "AudioConfig")
+        val gameRoot = requireNotNull(getExternalFilesDir(null)) {
+            "The app-specific game storage directory is unavailable"
+        }
+        if (!gameRoot.exists() && !gameRoot.mkdirs()) {
+            throw IllegalStateException("Unable to create game storage directory: $gameRoot")
+        }
+
+        val internalDir = File(gameRoot, "AudioConfig")
         clearDir(internalDir)
         copyFromAssets(internalDir)
 
-        ensureSampSettings()
-        initSAMP(maxFps, filesDir.toString())
-        super.onCreate(bundle)
+        ensureSampSettings(gameRoot)
+        initSAMP(maxFps, gameRoot.absolutePath)
         init()
     }
-    private fun ensureSampSettings() {
-        val sampDir = File(filesDir, "SAMP")
+    private fun ensureSampSettings(gameRoot: File) {
+        val sampDir = File(gameRoot, "SAMP")
         val settingsFile = File(sampDir, "settings.ini")
 
         if (settingsFile.exists()) return
