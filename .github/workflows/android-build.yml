@@ -41,6 +41,70 @@ jobs:
           print(f"Checked {len(paths)} tracked paths; no case collisions found.")
           PY
 
+      - name: Validate case-sensitive C++ includes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+
+          source_root = Path("app/src/main/cpp")
+          include_dirs = [
+              source_root,
+              source_root / "opus/include",
+              source_root / "multiplayer",
+              source_root / "multiplayer/vendor/imgui",
+              source_root / "multiplayer/vendor",
+              source_root / "multiplayer/game/RW",
+              source_root / "multiplayer/game",
+              source_root / "multiplayer/java_systems",
+              source_root / "multiplayer/game/Core",
+          ]
+          source_extensions = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"}
+
+          def resolve_case_insensitive(path):
+              current = Path(".")
+              for part in path.parts:
+                  if part in ("", "."):
+                      continue
+                  exact = current / part
+                  if exact.exists():
+                      current = exact
+                      continue
+                  if not current.is_dir():
+                      return None
+                  matches = [entry for entry in current.iterdir() if entry.name.casefold() == part.casefold()]
+                  if len(matches) != 1:
+                      return None
+                  current = matches[0]
+              return current
+
+          mismatches = []
+          include_pattern = re.compile(r"^\s*#\s*include\s*([<\"])([^>\"]+)[>\"]")
+          for source in source_root.rglob("*"):
+              if not source.is_file() or source.suffix.lower() not in source_extensions:
+                  continue
+              for line_number, line in enumerate(source.read_text(errors="ignore").splitlines(), 1):
+                  match = include_pattern.match(line)
+                  if not match or match.group(1) != '"':
+                      continue
+                  include_name = match.group(2)
+                  candidates = [source.parent / include_name] + [directory / include_name for directory in include_dirs]
+                  if any(candidate.is_file() for candidate in candidates):
+                      continue
+                  for candidate in candidates:
+                      actual = resolve_case_insensitive(candidate)
+                      if actual is not None and actual.is_file():
+                          mismatches.append(f"{source}:{line_number}: {include_name} -> {actual}")
+                          break
+
+          if mismatches:
+              print("Case-sensitive native include mismatches found:")
+              print("\n".join(f"  {item}" for item in mismatches))
+              raise SystemExit(1)
+          print("Checked quoted native includes; no case mismatches found.")
+          PY
+
       - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
