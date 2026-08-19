@@ -49,10 +49,30 @@ class Samp : GTASA() {
         clearDir(internalDir)
         copyFromAssets(internalDir)
 
+        ensureSampSettings()
         initSAMP(maxFps, filesDir.toString())
         super.onCreate(bundle)
         init()
     }
+    private fun ensureSampSettings() {
+        val sampDir = File(filesDir, "SAMP")
+        val settingsFile = File(sampDir, "settings.ini")
+
+        if (settingsFile.exists()) return
+
+        try {
+            if (!sampDir.exists()) sampDir.mkdirs()
+            assets.open("SAMP/settings.ini").use { inputStream ->
+                settingsFile.outputStream().use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            Log.d("SAMP", "Created default settings at: " + settingsFile)
+        } catch (e: IOException) {
+            Log.e("SAMP", "Failed to create settings: " + e.message, e)
+        }
+    }
+
     private fun clearDir(dir: File) {
         try {
             if (dir.exists()) {
